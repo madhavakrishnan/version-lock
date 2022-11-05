@@ -17,7 +17,7 @@ OBJS_DIR  = $(CUR_DIR)/.objs
 OBJ_FILES = $(addprefix $(OBJS_DIR)/, $(SRC_FILES:.cc=.o))
 BIN = test
 
-all: $(OBJ_FILES) numa-config.h 
+test: $(OBJ_FILES) numa-config.h 
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 $(OBJS_DIR)/%.o: %.cc $(DEPS_DIR) $(OBJS_DIR)
