@@ -1,7 +1,7 @@
 #pragma once 
 #include<cassert>
 #include<cerrno>
-#include<arch.h>
+#include"arch.h"
 
 namespace vl {
 
@@ -37,11 +37,11 @@ private:
 	inline uint64_t get_version_number() {return this->version_number;}
 };
 
-void version_lock::version_lock() {
+version_lock::version_lock() {
 	this->version_number = 0;
 }
 
-void version_lock::~version_lock() {
+version_lock::~version_lock() {
 	this->version_number = UINT64_MAX;
 }
 
@@ -94,7 +94,9 @@ inline bool version_lock::try_write_lock() {
 inline void version_lock::write_unlock() {
 
 	uint64_t version = get_version_number();
-	if (unlikely(version + 1 = UINT64_MAX - 1))
+
+	/* RESET version_number to 0 to avoid overflow*/
+	if (unlikely(version + 1 == UINT64_MAX - 1))
 		smp_cas(&this->version_number, version, RESET_LOCK);
 	/* no need of CAS, as it is not possible for 2 threads to call unlock on the
 	 * same lock, so just atomically increament the version_number by 1*/

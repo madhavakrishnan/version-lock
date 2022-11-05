@@ -15,15 +15,8 @@ DEPCFLAGS = -MD -MF $(DEPS_DIR)/$*.d -MP
 SRC_FILES = $(wildcard *.cc)
 OBJS_DIR  = $(CUR_DIR)/.objs
 OBJ_FILES = $(addprefix $(OBJS_DIR)/, $(SRC_FILES:.cc=.o))
-BINS = test
 
-all: $(BINS)
-	@for d in $(BINS); \
-                do ( cp $$d $(BIN_DIR); \
-                ); \
-        done
-
-test: $(OBJ_FILES) 
+all: $(OBJ_FILES) 
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 $(OBJS_DIR)/%.o: %.cc $(DEPS_DIR) $(OBJS_DIR)
