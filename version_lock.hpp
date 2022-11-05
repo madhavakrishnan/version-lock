@@ -166,33 +166,4 @@ inline bool version_lock::read_unlock(uint64_t initial_version_number) {
 
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-}
+}/* end namespace vl*/
