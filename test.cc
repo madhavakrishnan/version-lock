@@ -15,13 +15,14 @@ using namespace vl;
  * for testing purposes*/
 uint64_t __g_counter;
 version_lock vlock;
-#define N_ITRS_WRITE 10
-#define N_ITRS_READ 1
+#define TEST_READ_LOCK_NO_WAIT
+#define N_ITRS_WRITE 1000000
+#define N_ITRS_READ 1000000
 std::atomic<int> read_retry;
 
 void test_version_lock_write(int tid, int itrs) 
 {
-	std::cout << "thread " << tid << " begin" << std::endl;
+	std::cout << "writer thread " << tid << " begin" << std::endl;
 	for (int i = 0; i < itrs; ++i) {
 #ifdef DEBUG
 		std::cout << "itr= " << i << " begin counter= " << __g_counter << std::endl;
@@ -34,7 +35,7 @@ void test_version_lock_write(int tid, int itrs)
 		std::cout << "======================\n";
 #endif
 	}
-	std::cout << "thread " << tid << " done" << std::endl;
+	std::cout << "writer thread " << tid << " done" << std::endl;
 	return;
 }
 
@@ -43,10 +44,16 @@ void test_version_lock_read(int tid, int itrs)
 	volatile uint64_t version;
 	bool ret;
 	
-	std::cout << "thread " << tid << " begin" << std::endl;
+	std::cout << "reader thread " << tid << " begin" << std::endl;
 	for (int i = 0; i < itrs; ++i) {
 retry:
+#ifdef TEST_READ_LOCK_NO_WAIT
+		version = vlock.read_lock_no_wait();
+#else
+
 		version = vlock.read_lock();
+#endif
+
 #ifdef DEBUG
 		std::cout << "thread= " << tid << " counter= " << __g_counter << std::endl;
 #endif
@@ -56,7 +63,7 @@ retry:
 			goto retry;
 		}
 	}
-	std::cout << "thread " << tid << " done" << std::endl;
+	std::cout << "reader thread " << tid << " done" << std::endl;
 	return;
 }
 
@@ -84,6 +91,24 @@ void test_version_lock_apis(int n_threads)
 	/* testing concurrent readers only*/
 	for (int i = 0; i < n_threads; ++i) {
 		threads.push_back(std::thread(test_version_lock_read, i, N_ITRS_READ));
+	}
+	for (auto &th: threads) {
+		th.join();
+	}
+	std::cout << "global counter val= " << __g_counter << std::endl;
+	std::cout << "read_retries= " << read_retry << std::endl;
+
+	threads.clear();
+    std::cout << "======================\n";
+	std::cout << "testing " << 2 * n_threads << " concurrent readers and writers.." 
+		<< std::endl;
+	/* testing concurrent readers and writers*/
+	for (int i = 0; i < 2*n_threads; ++i) {
+		if (i < n_threads)
+			threads.push_back(std::thread(test_version_lock_write, i, N_ITRS_WRITE));
+		else 
+			threads.push_back(std::thread(test_version_lock_read, i, N_ITRS_READ));
+
 	}
 	for (auto &th: threads) {
 		th.join();
