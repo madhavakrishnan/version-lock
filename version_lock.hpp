@@ -8,6 +8,7 @@ namespace vl {
 #define RESET_LOCK 0
 /* can only be odd-- 1, 3, 5, 7*/
 #define SWITCH_LOCK_STATUS 1 
+//#define DEBUG
 
 class version_lock {
 public:
@@ -56,8 +57,10 @@ retry_lock_acquire:
 	 * even-- lock is free
 	 * odd-- lock is held*/
 	version = get_version_number();
-	lock_status = (bool)version % 2;
-
+	lock_status = version % 2;
+#ifdef DEBUG
+	std::cout << "version_number= " << version << " write_lock_status: " << lock_status << std::endl;
+#endif
 	/* if lock is free acquire the lock and return*/
 	if (!lock_status) {
 		/* return if CAS succeeds-- meaning lock is acquired*/
@@ -76,7 +79,7 @@ inline bool version_lock::try_write_lock() {
 	 * even-- lock is free
 	 * odd-- lock is held*/
 	uint64_t version = get_version_number();
-	bool lock_status = (bool)version % 2;
+	bool lock_status = version % 2;
 
 	/* if lock is free acquire the lock and return*/
 	if (!lock_status) {
@@ -98,9 +101,15 @@ inline void version_lock::write_unlock() {
 	/* RESET version_number to 0 to avoid overflow*/
 	if (unlikely(version + 1 == UINT64_MAX - 1))
 		smp_cas(&this->version_number, version, RESET_LOCK);
+	/*TODO: remove while running final evaluation*/
+	assert(version % 2);
 	/* no need of CAS, as it is not possible for 2 threads to call unlock on the
 	 * same lock, so just atomically increament the version_number by 1*/
 	smp_faa(&this->version_number, SWITCH_LOCK_STATUS);
+#ifdef DEBUG
+	std::cout << "version_number= " << this->version_number << " write_ulock_status: " 
+		<< this->version_number % 2 << std::endl;
+#endif
 	return;
 }
 
@@ -114,7 +123,7 @@ retry_lock_status:
 	 * even-- lock is free
 	 * odd-- lock is held*/
 	version = get_version_number();
-	lock_status = (bool)version % 2;
+	lock_status = version % 2;
 	
 	/* if lock is free, return the current version number*/
 	if (!lock_status)
@@ -129,7 +138,7 @@ retry_lock_status:
 inline uint64_t version_lock::try_read_lock() {
 
 	uint64_t version = get_version_number();
-	bool lock_status = (bool)version % 2;
+	bool lock_status = version % 2;
 	
 	/* if lock is free, return the current version number*/
 	if (!lock_status)
