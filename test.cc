@@ -4,6 +4,7 @@
 #include<atomic>
 #include<vector>
 #include"version_lock.hpp"
+#include"list.hpp"
 
 using namespace vl;
 #define TEST_VL_API 0
@@ -19,6 +20,10 @@ version_lock vlock;
 #define N_ITRS_WRITE 1000000
 #define N_ITRS_READ 1000000
 std::atomic<int> read_retry;
+
+/* parameters for testing list*/
+#define LIST_INIT_SIZE 100
+#define N_NODE_ADD 10000
 
 void test_version_lock_write(int tid, int itrs) 
 {
@@ -120,6 +125,125 @@ void test_version_lock_apis(int n_threads)
 
 }
 
+void vl_list_insert(list *_list, int count, uint64_t start_key, 
+		std::vector<uint64_t> *keys, int tid) {
+	
+	std::cout << "writer thread " << tid << " begin" << std::endl;
+	for (int i = 0; i < count; ++i) {
+		vlock.write_lock(); 
+		_list->insert(start_key + i, start_key + i);
+		keys->push_back(start_key + i);
+		vlock.write_unlock();
+	}
+	std::cout << "writer thread " << tid << " end" << std::endl;
+
+}
+
+void vl_list_lookup(list *_list, int start, int end, 
+		std::vector<uint64_t> keys, int tid)
+{
+	uint64_t version, val;
+	bool ret;
+
+#ifdef DEBUG
+	std::cout << "reader thread " << tid << ": " << start << "-" << end  << std::endl;
+#endif
+
+	for (int i = start; i < end; ++i) {
+retry:
+#ifdef TEST_READ_LOCK_NO_WAIT
+		version = vlock.read_lock_no_wait();
+#else
+		version = vlock.read_lock();
+#endif
+		val = _list->lookup(keys[i]);
+		assert(keys[i] == val);
+		ret = vlock.read_unlock(version);
+		if (!ret) {
+			read_retry.fetch_add(1, std::memory_order_seq_cst);
+			goto retry;
+		}
+	}
+	std::cout << "reader thread " << tid << " end" << std::endl;
+	return;
+
+}
+
+void test_version_lock_list(int n_threads) 
+{
+	std::vector<std::thread> threads;
+	list _list;
+	uint64_t start_key;
+	std::vector<uint64_t> keys;
+	int start, end;
+
+	/* init list*/	
+	for (uint64_t i = 0; i < LIST_INIT_SIZE; ++i) {
+		_list.insert(i + 100, i + 100);
+		keys.push_back(i + 100);
+	}
+	std::cout << "List after init" << std::endl;
+	_list.print_list();
+	std::cout << "===========\n";
+
+	/* testing list with concurrent writers only*/
+	std::cout << "inserting to list with " << n_threads << " threads" << std::endl;
+	for (int i = 0; i < n_threads; ++i) {
+		start_key = (i + 1) * 1000;
+		threads.push_back(std::thread(vl_list_insert, &_list, N_NODE_ADD, 
+					start_key, &keys, i));
+	}
+	for (auto &th:threads) {
+		th.join();
+	}
+#ifdef DEBUG
+	std::cout << "List after concurrent " <<  keys.size() << " inserts" << std::endl;
+	_list.print_list();
+#endif
+
+	threads.clear();
+
+	/* testing list with concurrent readers only*/
+	std::cout << "reading list with " << n_threads << " threads" << std::endl;
+	for (int i = 0; i < n_threads; ++i) {
+		start = (keys.size()/n_threads) * i;
+		end = start + (keys.size()/n_threads);
+		threads.push_back(std::thread(vl_list_lookup, &_list, start, 
+					end, keys, i));
+	}
+	for (auto &th:threads) {
+		th.join();
+	}
+	std::cout << "read_retries= " << read_retry << std::endl;
+	std::cout << "===========\n";
+
+	threads.clear();
+	std::cout << "testing " << 2 * n_threads << " concurrent readers and writers.." 
+		<< std::endl;
+	/* testing concurrent readers and writers*/
+	for (int i = 0; i < 2*n_threads; ++i) {
+		if (i < n_threads) {
+			start = (keys.size()/n_threads) * i;
+			end = start + (keys.size()/n_threads);
+			threads.push_back(std::thread(vl_list_lookup, &_list, start, 
+					end, keys, i));
+		}
+		else {
+			start_key = i * 10000;
+			threads.push_back(std::thread(vl_list_insert, &_list, N_NODE_ADD/10, 
+					start_key, &keys, i));
+		}
+
+	}
+	for (auto &th: threads) {
+		th.join();
+	}
+	std::cout << "read_retries= " << read_retry << std::endl;
+    std::cout << "======================\n";
+	return;
+
+}
+
 int main(int argc, char **argv)
 {
 	int n_threads, bench;
@@ -134,5 +258,7 @@ int main(int argc, char **argv)
 	std::cout << "threads= " << n_threads << " bench= " << bench << std::endl;
 	if (bench == TEST_VL_API)
 		test_version_lock_apis(n_threads);
+	if (bench == TEST_VL)
+		test_version_lock_list(n_threads);
 	return 0;
 }
