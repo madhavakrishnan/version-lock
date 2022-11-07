@@ -4,7 +4,7 @@
 #include"version_lock.hpp"
 
 using namespace vl;
-#define N_BUCKETS_DEF 19
+#define N_BUCKETS_DEF 1007
 
 class hash_table {
 public:
@@ -22,6 +22,7 @@ public:
 	inline uint64_t get_key_hash(uint64_t key);
 	inline uint64_t get_bucket(uint64_t hash);
 	int print();
+	int get_node_count();
 
 private:
 	uint64_t n_buckets;
@@ -137,6 +138,20 @@ int hash_table::print() {
 	}
 	return n_elems;
 }
+
+int hash_table::get_node_count() {
+	
+	int n_elems = 0;
+
+	for (uint64_t i = 0; i < this->n_buckets; ++i) {
+		n_elems += ht[i]._list->get_list_size();
+	}
+	return n_elems;
+}
+
+
+
+
 
 
 

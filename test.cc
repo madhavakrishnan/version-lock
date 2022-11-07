@@ -171,36 +171,119 @@ retry:
 
 }
 
+void vl_ht_insert(hash_table *vlht, int count, uint64_t start_key, 
+		std::vector<std::vector<uint64_t>> &keys, bool save_keys, int tid) {
+	
+	uint64_t key;
+
+	std::cout << "writer thread " << tid << " begin" << std::endl;
+	for (int i = 0; i < count; ++i) {
+		key = (i + 1) * (i + start_key);
+		vlht->insert(key, key);
+		if (save_keys)
+			keys[tid].push_back(key);
+	}
+	std::cout << "writer thread " << tid << " end" << std::endl;
+
+}
+
+void vl_ht_lookup(hash_table *vlht, 
+		std::vector<std::vector<uint64_t>> &keys, int tid)
+{
+	uint64_t val;
+
+	std::cout << "reader thread " << tid << " begin" << std::endl;
+
+	for (uint64_t i = 0; i < keys[tid].size(); ++i) {
+		val = vlht->lookup(keys[tid][i]);
+		assert(keys[tid][i] == val);
+	}
+	std::cout << "reader thread " << tid << " end" << std::endl;
+	return;
+}
+
 void test_version_lock_ht(int n_threads) 
 {
 	std::vector<std::thread> threads;
-	std::vector<uint64_t> keys;
+	std::vector<std::vector<uint64_t>> keys(n_threads);
 	hash_table ht;
-	uint64_t key;
+	std::vector<uint64_t>_keys; 
+	uint64_t key, start_key;
 	uint64_t _val;
+
+	/* init key vectors*/
+
 
 	/* init hash table*/
 	std::cout << "Initializing Hash Table with " << LIST_INIT_SIZE 
 		<< " elements.." << std::endl;
 	for (uint64_t i = 0; i < LIST_INIT_SIZE; ++i) {
+		std::cout << "i= " << i << std::endl;
 		key = (i + 1) * (i + 100);
 		ht.insert(key, key);
-		keys.push_back(key);
+		_keys.push_back(key);
 	}
 
+	keys.push_back(_keys);
 	std::cout << "Hash table after init " << std::endl;
 	int ret = ht.print();
-	for (uint64_t i = 0; i < keys.size(); ++i) {
-		_val = ht.lookup(keys[i]);
-		if (keys[i] != _val) {
-			std::cout << "key= " << keys[i] << " val= " << _val << std::endl;
-			assert(keys[i] == _val);
+	for (uint64_t i = 0; i < keys[0].size(); ++i) {
+		_val = ht.lookup(keys[0][i]);
+		if (keys[0][i] != _val) {
+			std::cout << "key= " << keys[0][i] << " val= " << _val << std::endl;
+			assert(keys[0][i] == _val);
 		}
 	}
 
 	std::cout << "==================\n";
 	std::cout << " Hash Table has " << ret << " nodes" << std::endl;
 
+	/* testing list with concurrent writers only*/
+	std::cout << "inserting to HT with " << n_threads << " threads" << std::endl;
+	for (int i = 0; i < n_threads; ++i) {
+		start_key = (i + 1) * 1000;
+		threads.push_back(std::thread(vl_ht_insert, &ht, N_NODE_ADD, 
+					start_key, std::ref(keys), true, i));
+	}
+	for (auto &th:threads) {
+		th.join();
+	}
+	ret = ht.get_node_count();
+	std::cout << "==================\n";
+	std::cout << " Hash Table has " << ret << " nodes" << std::endl;
+	threads.clear();
+
+	/* testing list with concurrent readers only*/
+	std::cout << "reading Hash Table with " << n_threads << " threads" << std::endl;
+	for (int i = 0; i < n_threads; ++i) {
+		threads.push_back(std::thread(vl_ht_lookup, &ht, std::ref(keys), i));
+	}
+	for (auto &th:threads) {
+		th.join();
+	}
+
+	std::cout << "===========\n";
+	threads.clear();
+	/* testing concurrent readers and writers*/
+	std::cout << "testing " << 2 * n_threads << " concurrent readers and writers.." 
+		<< std::endl;  
+	for (int i = 0; i < 2*n_threads; ++i) {
+		if (i % 2) {
+			threads.push_back(std::thread(vl_ht_lookup, &ht, std::ref(keys), i));
+		}
+		else {
+			start_key = i * 10000;
+			threads.push_back(std::thread(vl_ht_insert, &ht, N_NODE_ADD, 
+					start_key, std::ref(keys), false, i));
+		}
+
+	}
+	for (auto &th: threads) {
+		th.join();
+	}
+	ret = ht.get_node_count();
+	std::cout << "==================\n";
+	std::cout << " Hash Table has " << ret << " nodes" << std::endl;
 
 }
 

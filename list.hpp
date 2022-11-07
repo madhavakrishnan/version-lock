@@ -15,6 +15,7 @@ public:
 	uint64_t lookup(uint64_t target_key);
 	bool remove(uint64_t target_key);
 	int print_list();
+	int get_list_size();
 
 	/* thread safe lock free varients*/
 	bool lf_insert(uint64_t key, uint64_t val);
@@ -55,7 +56,11 @@ inline node* list::get_list_head_atomic() {
 }
 
 /* this function inserts only at the head
- * it is not thread safe*/
+ * it is not thread safe
+ *
+ * TODO: do we need update implmentation?
+ * if so then we have to traverse the bucket chain
+ * fully as we are simply adding to head*/
 bool list::insert(uint64_t key, uint64_t val) {
 	node **head = get_list_head_ptr();
 	if (!head) {
@@ -125,6 +130,18 @@ int list::print_list() {
 	}
 	return _node;
 }
+
+int list::get_list_size() {
+	node *head = get_list_head();
+	node *curr = head;
+	int _node = 0;
+	while (curr) {
+		curr = curr->next;
+		++_node;
+	}
+	return _node;
+}
+
 
 /* this function inserts only at the head
  * lock-free varient*/
