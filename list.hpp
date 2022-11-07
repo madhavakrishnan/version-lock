@@ -14,7 +14,7 @@ public:
 	bool insert(uint64_t key, uint64_t val);
 	uint64_t lookup(uint64_t target_key);
 	bool remove(uint64_t target_key);
-	void print_list();
+	int print_list();
 
 	/* thread safe lock free varients*/
 	bool lf_insert(uint64_t key, uint64_t val);
@@ -113,17 +113,17 @@ bool list::remove(uint64_t target_key) {
 	return false;
 }
 
-void list::print_list() {
+int list::print_list() {
 	node *head = get_list_head();
 	node *curr = head;
-	int itr = 0;
+	int _node = 0;
 	while (curr) {
-		std::cout<< " node-"<< itr << ": " << curr->key << "\t" << curr->val << std::endl;
+		std::cout<< " node-"<< _node << ": " << curr->key << "\t" << curr->val << std::endl;
 		std::cout<<"========================\n";
 		curr = curr->next;
-		++itr;
+		++_node;
 	}
-	return;
+	return _node;
 }
 
 /* this function inserts only at the head

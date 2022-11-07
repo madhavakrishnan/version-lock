@@ -1,7 +1,7 @@
 #pragma once 
 #include<cstdint>
 #include<cstdlib>
-#include "arch.h"
+#include"arch.h"
 
 #define DEFAULT_ALIGNMENT 16
 
@@ -36,4 +36,5 @@ struct node {
 	void operator delete(void *ptr) {
 		free(ptr);
 	}
-} ____cacheline_aligned;
+} ____ptr_aligned;
+

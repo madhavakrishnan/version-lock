@@ -5,12 +5,14 @@
 #include<vector>
 #include"version_lock.hpp"
 #include"list.hpp"
+#include"vlht.hpp"
 
 using namespace vl;
 #define TEST_VL_API 0
-#define TEST_VL 1
-#define TEST_LF 2
-#define TEST_RW 3
+#define TEST_VL_LIST 1
+#define TEST_VL_HT 2
+#define TEST_LF 3
+#define TEST_RW 4
 
 /* an instance of global counter and global version lock 
  * for testing purposes*/
@@ -169,6 +171,39 @@ retry:
 
 }
 
+void test_version_lock_ht(int n_threads) 
+{
+	std::vector<std::thread> threads;
+	std::vector<uint64_t> keys;
+	hash_table ht;
+	uint64_t key;
+	uint64_t _val;
+
+	/* init hash table*/
+	std::cout << "Initializing Hash Table with " << LIST_INIT_SIZE 
+		<< " elements.." << std::endl;
+	for (uint64_t i = 0; i < LIST_INIT_SIZE; ++i) {
+		key = (i + 1) * (i + 100);
+		ht.insert(key, key);
+		keys.push_back(key);
+	}
+
+	std::cout << "Hash table after init " << std::endl;
+	int ret = ht.print();
+	for (uint64_t i = 0; i < keys.size(); ++i) {
+		_val = ht.lookup(keys[i]);
+		if (keys[i] != _val) {
+			std::cout << "key= " << keys[i] << " val= " << _val << std::endl;
+			assert(keys[i] == _val);
+		}
+	}
+
+	std::cout << "==================\n";
+	std::cout << " Hash Table has " << ret << " nodes" << std::endl;
+
+
+}
+
 void test_version_lock_list(int n_threads) 
 {
 	std::vector<std::thread> threads;
@@ -258,7 +293,9 @@ int main(int argc, char **argv)
 	std::cout << "threads= " << n_threads << " bench= " << bench << std::endl;
 	if (bench == TEST_VL_API)
 		test_version_lock_apis(n_threads);
-	if (bench == TEST_VL)
+	if (bench == TEST_VL_LIST)
 		test_version_lock_list(n_threads);
+	if (bench == TEST_VL_HT)
+		test_version_lock_ht(n_threads);
 	return 0;
 }
