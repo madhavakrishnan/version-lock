@@ -3,13 +3,14 @@
 #include<cstdlib>
 #include"arch.h"
 
-#define DEFAULT_ALIGNMENT 16
+//#define DEFAULT_ALIGNMENT 16
+#define DEFAULT_ALIGNMENT 64
 
 struct node {
 	uint64_t key;
 	uint64_t val;
-	uint64_t tag; /* will be used only for lock free implementation*/
-	node *next;
+	volatile uint64_t tag; /* will be used only for lock free implementation*/
+	volatile node *next;
 
 	/* constructor for dummy node*/
 	node() {
@@ -36,5 +37,6 @@ struct node {
 	void operator delete(void *ptr) {
 		free(ptr);
 	}
-} ____ptr_aligned;
+//} ____ptr_aligned;
+} ____cacheline_aligned;
 
