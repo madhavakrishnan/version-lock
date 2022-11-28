@@ -7,8 +7,9 @@ public:
 	//list(uint64_t key, uint64_t val);
 	~list();
 	inline node *alloc_node(uint64_t key, uint64_t val);
-	inline node *get_list_head();
-	inline node **get_list_head_ptr();
+	//inline node *get_list_head();
+	//inline node **get_list_head_ptr();
+	//inline node *get_list_head_atomic();
 	
 	/* thread unsafe functions for Version lock and RW lock*/
 	bool insert(uint64_t key, uint64_t val);
@@ -23,7 +24,6 @@ public:
 	uint64_t lf_lookup_snapshot(uint64_t target_key);
 	uint64_t lf_lookup_linearizable(uint64_t target_key);
 	bool lf_remove(uint64_t target_key);
-	inline node *get_list_head_atomic();
 private:
   // this is the sentinel node
 	node *head;
@@ -48,7 +48,7 @@ inline node* list::alloc_node(uint64_t key, uint64_t val) {
 	return new_node;
 }
 
-inline node** list::get_list_head_ptr() {
+/*inline node** list::get_list_head_ptr() {
 	return &this->head;
 }
 
@@ -58,7 +58,7 @@ inline node* list::get_list_head() {
 
 inline node* list::get_list_head_atomic() {
 	return smp_atomic_load(&this->head);
-}
+}*/
 
 /* this function inserts only at the head
  * it is not thread safe

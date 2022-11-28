@@ -1,18 +1,14 @@
 #pragma once
 #include "base_ht.hpp"
-#include "version_lock.hpp"
 
-using namespace vl;
-
-class vl_hash_table : public hash_table {
+class lf_hash_table : public hash_table {
 public:
 	struct bucket {
 		list *_list;
-		version_lock lock;
 	}____cacheline_aligned;
 
-	vl_hash_table(uint64_t n_bkts = N_BUCKETS_DEF);
-	~vl_hash_table();
+	lf_hash_table(uint64_t n_bkts = N_BUCKETS_DEF);
+	~lf_hash_table();
 
   // pure virtual fns from base class
 	bool insert(uint64_t key, uint64_t val);
@@ -27,7 +23,7 @@ private:
 }____cacheline_aligned;
 
 
-vl_hash_table::vl_hash_table(uint64_t n_bkts) : hash_table(n_bkts) {
+lf_hash_table::lf_hash_table(uint64_t n_bkts) : hash_table(n_bkts) {
 	
   size_t size = sizeof(bucket) * this->n_buckets;
 	this->mem = aligned_alloc(DEFAULT_ALIGNMENT, size);
@@ -41,60 +37,40 @@ vl_hash_table::vl_hash_table(uint64_t n_bkts) : hash_table(n_bkts) {
 	}
 }
 
-vl_hash_table::~vl_hash_table() {
-	//free(ht);
+lf_hash_table::~lf_hash_table() {
 	free(this->mem);
 }
 
-bool vl_hash_table::insert(uint64_t key, uint64_t val) {
+bool lf_hash_table::insert(uint64_t key, uint64_t val) {
 
 	uint64_t bkt;
 	bool ret;
 	
 	bkt = get_key_hash(key);
-	ht[bkt].lock.write_lock();
-	ret = ht[bkt]._list->insert(key, val);
+	ret = ht[bkt]._list->lf_insert(key, val);
 	if (!ret) {
 		std::cerr << "hash insert falied for key " << key << std::endl;
 		assert(ret);
 	}
-	ht[bkt].lock.write_unlock();
 	return true;
 }
 
-uint64_t vl_hash_table::lookup(uint64_t key) {
+uint64_t lf_hash_table::lookup(uint64_t key) {
 	
-	uint64_t bkt, version, val;
-	bool retry;
+	uint64_t bkt, val;
 
 	bkt = get_key_hash(key);
-
-loop:
-	version = ht[bkt].lock.read_lock_no_wait();
-	val = ht[bkt]._list->lookup(key);
-	retry = ht[bkt].lock.read_unlock(version);
-	if (!retry)
-		goto loop;
+	val = ht[bkt]._list->lf_lookup_snapshot(key);
+	//val = ht[bkt]._list->lf_lookup_linearizable(key);
 	return val;
 }
 
-bool vl_hash_table::remove(uint64_t key) {
-	
-	uint64_t bkt;
-	bool ret;
-
-	bkt = get_key_hash(key);
-	ht[bkt].lock.write_lock();
-	ret = ht[bkt]._list->remove(key);
-	if (!ret) {
-		std::cerr << "hash remove falied for key " << key << std::endl;
-		assert(ret);
-	}
-	ht[bkt].lock.write_unlock();
-	return true;
+bool lf_hash_table::remove(uint64_t key) {
+  // add impl
+  return true;
 }
 
-int vl_hash_table::print() {
+int lf_hash_table::print() {
 	
 	int n_elems = 0;
 
@@ -105,7 +81,7 @@ int vl_hash_table::print() {
 	return n_elems;
 }
 
-int vl_hash_table::get_node_count() {
+int lf_hash_table::get_node_count() {
 	
 	int n_elems = 0;
 
