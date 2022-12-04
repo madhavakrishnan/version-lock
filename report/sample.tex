@@ -1,0 +1,63 @@
+\section{Sample}
+\label{s:sample}
+
+Papers~\cite{logfreeds-david-atc18, whisper-nalli-asplos17}
+
+Use autoref not ref: \autoref{s:sample}, \autoref{c:sample},
+\autoref{f:sample}, \autoref{t:sample}, \autoref{g:sample0},
+\autoref{g:sample1}, \autoref{g:sample2}
+
+\begin{figure}[t]
+  \noindent
+  \centering
+  \inputminted[xleftmargin=11pt,fontsize=\scriptsize,linenos,escapeinside=@@]{c}{code/sample.c}
+  \caption{
+    Code example. Ref Line~\ref{f:pmdkbug:corruption0}.
+  }
+  \label{c:sample}
+\end{figure}
+
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=.75\columnwidth]{fig/sample}
+  \caption{Figure example. }
+  \label{f:sample}
+\end{figure}
+
+\begin{figure*}
+  \centering
+  \input{data/sample0}
+  \caption{
+    Graph example 0.
+  }
+  \label{g:sample0}
+\end{figure*}
+
+\begin{figure}
+  \centering
+  \input{data/sample1}
+  \caption{
+    Graph example 1.
+  }
+  \label{g:sample1}
+\end{figure}
+
+\begin{figure}
+  \centering
+  \input{data/sample2}
+  \caption{
+    Graph example 2.
+  }
+  \label{g:sample2}
+\end{figure}
+
+\begin{table}[t]
+  \ra{.9}
+  \centering
+  \footnotesize
+  \input{fig/tbl-sample}
+  \caption{
+    Table example.
+  }
+  \label{t:sample}
+\end{table}

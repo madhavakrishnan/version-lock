@@ -1,0 +1,34 @@
+# Makalu
+# Number of threads				# Operations per microsecond
+1								0.004812437
+2								0.0028121
+4								0.001745672
+8								0.001129548
+16								0.00104221
+32								0.001955555
+64								0
+100								0
+
+
+# Poseidon
+# Number of threads				# Operations per microsecond
+1								0.37620
+2								0.63811
+4								1.21168
+8								2.59468
+16								5.55066
+32								10.80540
+64								20.32534
+100								29.50814
+
+
+# PMDK
+# Number of threads				# Operations per microsecond
+1								0.36788
+2								0.72925
+4								1.35285
+8								2.40718
+16								4.18854
+32								6.23846
+64								8.14021
+100								9.58885

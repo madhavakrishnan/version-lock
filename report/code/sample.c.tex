@@ -1,0 +1,32 @@
+\begin{Verbatim}[commandchars=\\\{\},codes={\catcode`\$=3\catcode`\^=7\catcode`\_=8\relax}]
+\PY{k+kt}{void}\PY{+w}{ }\PY{n+nf}{pmdk\PYZus{}overlapping\PYZus{}allocation}\PY{p}{(}\PY{n}{nvm\PYZus{}heap}\PY{+w}{ }\PY{o}{*}\PY{n}{heap}\PY{p}{)}\PY{+w}{ }\PY{p}{\PYZob{}}
+\PY{+w}{    }\PY{k+kt}{void}\PY{+w}{ }\PY{o}{*}\PY{n}{p}\PY{p}{[}\PY{l+m+mi}{1024}\PY{p}{]}\PY{p}{,}\PY{+w}{ }\PY{o}{*}\PY{n}{free}\PY{p}{;}
+\PY{+w}{    }\PY{k+kt}{int}\PY{+w}{ }\PY{n}{i}\PY{p}{;}
+
+\PY{+w}{    }\PY{c+cm}{/* Make the NVM heap full of 64\PYZhy{}byte objects */}
+\PY{+w}{    }\PY{k}{for}\PY{+w}{ }\PY{p}{(}\PY{n}{i}\PY{+w}{ }\PY{o}{=}\PY{+w}{ }\PY{l+m+mi}{0}\PY{p}{;}\PY{+w}{ }\PY{n+nb}{true}\PY{p}{;}\PY{+w}{ }\PY{n}{i}\PY{+w}{ }\PY{o}{=}\PY{+w}{ }\PY{o}{+}\PY{o}{+}\PY{n}{i}\PY{+w}{ }\PY{o}{\PYZpc{}}\PY{+w}{ }\PY{l+m+mi}{1024}\PY{p}{)}\PY{+w}{ }\PY{p}{\PYZob{}}
+\PY{+w}{        }\PY{k}{if}\PY{+w}{ }\PY{p}{(}\PY{+w}{ }\PY{o}{!}\PY{p}{(}\PY{n}{p}\PY{p}{[}\PY{n}{i}\PY{p}{]}\PY{+w}{ }\PY{o}{=}\PY{+w}{ }\PY{n}{nvm\PYZus{}malloc}\PY{p}{(}\PY{l+m+mi}{64}\PY{p}{)}\PY{p}{)}\PY{+w}{ }\PY{p}{)}
+\PY{+w}{            }\PY{k}{break}\PY{p}{;}
+\PY{+w}{    }\PY{p}{\PYZcb{}}
+
+\PY{+w}{    }\PY{c+cm}{/* Free an arbitrary object but before freeing}
+\PY{c+cm}{     * the object, corrupt the size in its allocation}
+\PY{c+cm}{     * header to larger number. It will make the PMDK}
+\PY{c+cm}{     * allocator corrupt its allocation bitmap. */}
+\PY{+w}{    }\PY{n}{free}\PY{+w}{ }\PY{o}{=}\PY{+w}{ }\PY{n}{p}\PY{p}{[}\PY{n}{i}\PY{o}{/}\PY{l+m+mi}{2}\PY{p}{]}\PY{p}{;}
+\PY{+w}{    }\PY{o}{*}\PY{p}{(}\PY{k+kt}{uint64\PYZus{}t}\PY{+w}{ }\PY{o}{*}\PY{p}{)}\PY{p}{(}\PY{n}{free}\PY{+w}{ }\PY{o}{\PYZhy{}}\PY{+w}{ }\PY{l+m+mi}{16}\PY{p}{)}\PY{+w}{ }\PY{o}{=}\PY{+w}{ }\PY{l+m+mi}{1088}\PY{p}{;}\PY{+w}{ }\PY{c+cm}{/* Corrupt header!!! */}\PY{+w}{ }\PY{err}{@}\PY{err}{\PYZbs{}}\PY{n}{label}\PY{p}{\PYZob{}}\PY{n}{f}\PY{o}{:}\PY{n}{pmdkbug}\PY{o}{:}\PY{n}{corruption0}\PY{p}{\PYZcb{}}\PY{err}{@}
+\PY{+w}{    }\PY{n}{nvm\PYZus{}free}\PY{p}{(}\PY{n}{free}\PY{p}{)}\PY{p}{;}
+
+\PY{+w}{    }\PY{c+cm}{/* Since only one object is freed, the NVM heap}
+\PY{c+cm}{     * should be able to allocate only one 64\PYZhy{}byte object.}
+\PY{c+cm}{     * But due to the allocation bitmap corruption}
+\PY{c+cm}{     * in the previous step, 9 objects will be allocated.}
+\PY{c+cm}{     * Unfortunately, 8 out of 9 will be already allocated}
+\PY{c+cm}{     * objects so it will cause user data corruption. */}
+\PY{+w}{    }\PY{k}{for}\PY{+w}{ }\PY{p}{(}\PY{n}{i}\PY{+w}{ }\PY{o}{=}\PY{+w}{ }\PY{l+m+mi}{0}\PY{p}{;}\PY{+w}{ }\PY{n+nb}{true}\PY{p}{;}\PY{+w}{ }\PY{n}{i}\PY{+w}{ }\PY{o}{=}\PY{+w}{ }\PY{o}{+}\PY{o}{+}\PY{n}{i}\PY{+w}{ }\PY{o}{\PYZpc{}}\PY{+w}{ }\PY{l+m+mi}{1024}\PY{p}{)}\PY{+w}{ }\PY{p}{\PYZob{}}
+\PY{+w}{        }\PY{k}{if}\PY{+w}{ }\PY{p}{(}\PY{+w}{ }\PY{o}{!}\PY{p}{(}\PY{n}{p}\PY{p}{[}\PY{n}{i}\PY{p}{]}\PY{+w}{ }\PY{o}{=}\PY{+w}{ }\PY{n}{nvm\PYZus{}malloc}\PY{p}{(}\PY{l+m+mi}{64}\PY{p}{)}\PY{p}{)}\PY{+w}{ }\PY{p}{)}\PY{+w}{ }\PY{err}{@}\PY{err}{\PYZbs{}}\PY{n}{label}\PY{p}{\PYZob{}}\PY{n}{f}\PY{o}{:}\PY{n}{pmdkbug}\PY{o}{:}\PY{n}{overlap}\PY{p}{\PYZcb{}}\PY{err}{@}
+\PY{+w}{              }\PY{k}{break}\PY{p}{;}
+\PY{+w}{        }\PY{n}{assert}\PY{p}{(}\PY{n}{p}\PY{p}{[}\PY{n}{i}\PY{p}{]}\PY{+w}{ }\PY{o}{=}\PY{o}{=}\PY{+w}{ }\PY{n}{free}\PY{p}{)}\PY{p}{;}\PY{+w}{ }\PY{c+cm}{/* This will fail!!! */}\PY{+w}{ }\PY{err}{@}\PY{err}{\PYZbs{}}\PY{n}{label}\PY{p}{\PYZob{}}\PY{n}{f}\PY{o}{:}\PY{n}{pmdkbug}\PY{o}{:}\PY{n}{assert0}\PY{p}{\PYZcb{}}\PY{err}{@}
+\PY{+w}{    }\PY{p}{\PYZcb{}}
+\PY{p}{\PYZcb{}}
+\end{Verbatim}
