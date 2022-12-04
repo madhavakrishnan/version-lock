@@ -6,6 +6,8 @@
 #include"version_lock.hpp"
 #include"list.hpp"
 #include"vlht.hpp"
+#include "rwht.hpp"
+#include "lfht.hpp"
 
 using namespace vl;
 #define TEST_VL_API 0
@@ -171,7 +173,7 @@ retry:
 
 }
 
-void vl_ht_insert(hash_table *vlht, int count, uint64_t start_key, 
+void vl_ht_insert(vl_hash_table *vlht, int count, uint64_t start_key, 
 		std::vector<std::vector<uint64_t>> &keys, bool save_keys, int tid) {
 	
 	uint64_t key;
@@ -187,7 +189,7 @@ void vl_ht_insert(hash_table *vlht, int count, uint64_t start_key,
 
 }
 
-void vl_ht_lookup(hash_table *vlht, 
+void vl_ht_lookup(vl_hash_table *vlht, 
 		std::vector<std::vector<uint64_t>> &keys, int tid)
 {
 	uint64_t val;
@@ -206,7 +208,7 @@ void test_version_lock_ht(int n_threads)
 {
 	std::vector<std::thread> threads;
 	std::vector<std::vector<uint64_t>> keys(n_threads);
-	hash_table ht;
+	vl_hash_table ht;
 	std::vector<uint64_t>_keys; 
 	uint64_t key, start_key;
 	uint64_t _val;
