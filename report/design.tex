@@ -9,3 +9,75 @@
 - version lock hash table example
 - correctness
 
+In this section we explain our design goals followed by the \sys design.
+
+\subsection{Design Goals}
+\label{s:des:goals}
+
+\PP{Avoid read-modify writes for read locks}
+
+\PP{Avoid cacheline contention for read locks}
+
+\PP{Achieve high scalability and performance}
+
+\PP{Simple lock APIs and interface}
+
+\begin{figure}[t]
+% \vspace{-15px}
+ \centering
+ \begin{subfloat}
+ \centering
+ \inputminted[xleftmargin=11pt,fontsize=\scriptsize,escapeinside=@@]{c}{code/api.c}
+ \end{subfloat}
+ \coderule
+ %\vspace{-5px}
+	\caption{\sys APIs to be used directly in the application}
+%\vspace{-20px}
+ \label{f:vlw}
+\end{figure}
+
+\begin{figure}[t]
+% \vspace{-15px}
+ \centering
+ \begin{subfloat}
+ \centering
+ \inputminted[xleftmargin=11pt,fontsize=\scriptsize,escapeinside=@@]{c}{code/vlw.c}
+ \end{subfloat}
+ \coderule
+ %\vspace{-5px}
+	\caption{Code snippet of \sys \emph{write\_lock} and \emph{write\_unlock} 
+	functions. }
+%\vspace{-20px}
+ \label{f:vlw}
+\end{figure}
+
+\begin{figure}[t]
+% \vspace{-15px}
+ \centering
+ \begin{subfloat}
+ \centering
+ \inputminted[xleftmargin=11pt,fontsize=\scriptsize,escapeinside=@@]{c}{code/vlr.c}
+ \end{subfloat}
+ \coderule
+ %\vspace{-5px}
+	\caption{Code snippet of \sys \emph{read\_lock} and \emph{read\_unlock} 
+	functions. }
+%\vspace{-20px}
+ \label{f:vlr}
+\end{figure}
+
+\begin{figure}[t]
+% \vspace{-15px}
+ \centering
+ \begin{subfloat}
+ \centering
+ \inputminted[xleftmargin=11pt,fontsize=\scriptsize,escapeinside=@@]{c}{code/vlht.c}
+ \end{subfloat}
+ \coderule
+ %\vspace{-5px}
+ \caption{ Code snippet of a \sys enabled
+	hash table insert and lookup functions.} 
+%\vspace{-20px}
+ \label{f:vlht}
+\end{figure}
+

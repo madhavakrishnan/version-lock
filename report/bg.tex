@@ -1,14 +1,115 @@
 \section{Backgorund}
 \label{s:bg}
 
-- pessimistic concurrency control
-	- mutex and how it works
-	- rw lock and how it works
-	- spinlock and its flavours
-	- pros and cons of pcc
-- OCC
-	- lock-free programming 
-	- how it works 
-	- what are atomic instructions
-	- pros and cons
+~\cite{wormhole-wu-eurosys19}
+In this section we explain the different concurrency control mechanisms and
+their pros and cons. Finally we end this section by explaining the motivation
+behind the \sys design.
+
+\subsection{Pessimistic Concurrency Control}
+\label{s:bg:pcc}
+Pessimistic Concurrency Control (PCC) works on the notion that there will be a
+concurrent access and to avoid that it begins the operation (read/write) by
+first obtaining an exclusive access to the shared memory and then it proceeds to
+execute the operation on the shared memory. Locks are the most popular example
+for PCC. For example, imagine a shared counter (global) which is being
+concurrent accessed by multiple threads and is protected using a mutex~\cite{}. 
+The threads even before accessing the counter has to first acquire the mutex and
+only the thread that successfully acquires the mutex lock will access the
+counter while others keep waiting on the mutex until it is released. Mutex
+(a.k.a binary semaphore) one of the simplest PCC and there is also more
+relatively advanced PCC techniques such as the Readers-writer (RW) lock which allows
+multiple readers to access the shared counter while giving exclusive access the
+the writers. In this work we will consider RW lock as representative PCC
+technique. 
+
+\PP{RW Lock}
+RW lock supports better concurrency by allowing multiple readers to exist in the
+critical section. Going by our previous shared counter example, when the counter
+is protected using RW lock (instead of a mutex) then all threads that just 
+wants to read the counter will be allowed given that there is no on-going write.
+RW lock similar to mutex gives an exclusive access to the writers i.e., only one
+writer is allowed to update the counter and the rest of the writer thread would
+wait for the write lock to be available. Note that if a writer is holding the
+lock then readers are also blocked until the writer finishes. 
+
+In C++ standard library, RW lock is available in the form of shared
+mutex~\cite{}. In the pthreads~\cite{} library RW lock has \emph{read\_lock} 
+and \emph{write\_lock} which the threads acquire based on the operations they intend to
+execute. For instance, the threads that just wants to read the shared counter
+will acquire \emph{read\_lock} while the threads that requires to update the
+shared counter will acquire \emph{write\_lock}. As stated earlier, in RW lock
+\emph{write\_lock and read\_lock} has the same precedence, 
+\ie, if the \emph{write\_lock} is held by a thread no other thread can 
+either acquire the \emph{write\_lock} or the \emph{read\_lock}. In contrary, when
+the \emph{read\_lock} is held, the threads that require \emph{read\_lock} are
+allowed to acquire the lock while the threads that requires to acquire
+the \emph{write\_lock} will have to wait for threads currently holding the
+\emph{read\_lock} to release it. 
+
+
+\subsection{Optimistic Concurrency Control}
+\label{s:bg:occ}
+Optimistic Concurrency Control (OCC) techniques in general do not wait for locks
+to be available rather they execute the operations and then check for
+violations. Upon detecting any violation \ie, concurrent access from other
+threads usually they fallback to the retry mechanism. Two-phase Locking (2PL)
+and lock-free concurrency are some of the popular OCC techniques. 2PL
+technique~\cite{} is mostly used to design  database transactions while
+lock-free programming~\cite{} are used to design common low-level data
+structures such as a linked list, hash table, binary search tree etc. Lock-free
+programming have also been used in the prior research to design more complex
+data structures such as a B+tree~\cite{}. In this work we will consider
+lock-free programming as the OCC representative as we primarily focus on
+designing \sys to be used with low-level data structures. 
+
+\PP{Lock-free Programming}
+\label{s:bg:occ:lf}
+Lock-free programming uses hardware instructions to guarantee atomicity for
+reads and writes across multiple threads. CPU instructions~\cite{} support 
+primitive atomics (\eg, compare and swap (CAS), fetch and add (FAA) etc) that synchronizes
+concurrent access at the hardware level. These instructions mostly support
+8 bytes updates while some instructions such as CAS support 16 byte operations as well. 
+Such instructions work by using lock-prefix \ie, the CPU issues lock on the
+cacheline that is being updated and hence prevents that particular cacheline
+from concurrent reads and writes. Atomic instructions at a very high level can
+be considered as a mutex implemented at the hardware level. 
+
+Although, atomic operations are beneficial they are notoriously hard for
+programming even the simple low-level data structures. It is extremely hard for
+even the programmers with a lot of  experience to write a correct concurrent
+lock-free data structure. Further, since there is no notion of locks, ABA
+problem~\cite{} is highly prevalent in such data structures. So the programmers
+generally rely on the high-level languages such as Java~\cite{} that internally
+supports garbage collection. For the lock-free programming to be developed in
+unsafe languages such as C/C++ requires programmers to define their won garbage
+collection mechanism. The issue is that designing a lock-free highly efficient
+garbage collection technique is a hard task. Further, with all these issues it
+is very hard if not impossible to make complex data structures such as a B+tree
+or a radix tree entirely lock-free. Even the existing works have just been
+research prototype or they tend to suffer from high performance overhead than
+their well optimized lock based counterparts~\cite{}.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
