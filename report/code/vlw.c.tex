@@ -15,8 +15,10 @@
 
 \PY{+w}{    }\PY{c+cm}{/* if lock is free acquire the lock and return*/}
 \PY{+w}{    }\PY{k}{if}\PY{+w}{ }\PY{p}{(}\PY{o}{!}\PY{n}{lock\PYZus{}status}\PY{p}{)}\PY{+w}{ }\PY{p}{\PYZob{}}
-\PY{+w}{        }\PY{c+cm}{/* return if CAS succeeds\PYZhy{}\PYZhy{} meaning lock is acquired*/}
-\PY{+w}{        }\PY{k}{if}\PY{+w}{ }\PY{p}{(}\PY{n}{smp\PYZus{}cas}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{this}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{version\PYZus{}number}\PY{p}{,}\PY{+w}{ }\PY{n}{version}\PY{p}{,}\PY{+w}{ }\PY{n}{version}\PY{+w}{ }\PY{o}{+}\PY{+w}{ }\PY{n}{SWITCH\PYZus{}LOCK\PYZus{}STATUS}\PY{p}{)}\PY{p}{)}\PY{+w}{  }
+\PY{+w}{        }\PY{c+cm}{/* return if CAS succeeds\PYZhy{}\PYZhy{} }
+\PY{c+cm}{         * meaning lock is acquired*/}
+\PY{+w}{        }\PY{k}{if}\PY{+w}{ }\PY{p}{(}\PY{n}{smp\PYZus{}cas}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{this}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{version\PYZus{}number}\PY{p}{,}\PY{+w}{ }\PY{n}{version}\PY{p}{,}\PY{+w}{ }
+\PY{+w}{                }\PY{n}{version}\PY{+w}{ }\PY{o}{+}\PY{+w}{ }\PY{n}{SWITCH\PYZus{}LOCK\PYZus{}STATUS}\PY{p}{)}\PY{p}{)}\PY{+w}{  }
 \PY{+w}{            }\PY{k}{return}\PY{p}{;}
 \PY{+w}{    }\PY{p}{\PYZcb{}}
 
@@ -30,7 +32,8 @@
 
 \PY{+w}{    }\PY{c+cm}{/* RESET version\PYZus{}number to 0 to avoid overflow*/}
 \PY{+w}{    }\PY{k}{if}\PY{+w}{ }\PY{p}{(}\PY{n}{unlikely}\PY{p}{(}\PY{n}{version}\PY{+w}{ }\PY{o}{+}\PY{+w}{ }\PY{l+m+mi}{1}\PY{+w}{ }\PY{o}{=}\PY{o}{=}\PY{+w}{ }\PY{n}{UINT64\PYZus{}MAX}\PY{+w}{ }\PY{o}{\PYZhy{}}\PY{+w}{ }\PY{l+m+mi}{1}\PY{p}{)}\PY{p}{)}
-\PY{+w}{        }\PY{n}{smp\PYZus{}cas}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{this}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{version\PYZus{}number}\PY{p}{,}\PY{+w}{ }\PY{n}{version}\PY{p}{,}\PY{+w}{ }\PY{n}{RESET\PYZus{}LOCK}\PY{p}{)}\PY{p}{;}
+\PY{+w}{        }\PY{n}{smp\PYZus{}cas}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{this}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{version\PYZus{}number}\PY{p}{,}\PY{+w}{ }
+\PY{+w}{            }\PY{n}{version}\PY{p}{,}\PY{+w}{ }\PY{n}{RESET\PYZus{}LOCK}\PY{p}{)}\PY{p}{;}
 
 \PY{+w}{    }\PY{n}{smp\PYZus{}faa}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{this}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{version\PYZus{}number}\PY{p}{,}\PY{+w}{ }\PY{n}{SWITCH\PYZus{}LOCK\PYZus{}STATUS}\PY{p}{)}\PY{p}{;}
 \PY{+w}{    }\PY{k}{return}\PY{p}{;}

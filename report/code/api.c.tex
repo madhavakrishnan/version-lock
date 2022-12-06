@@ -10,14 +10,11 @@
 \PY{c+cm}{/* allows the reader and returns the current version number*/}\PY{+w}{ }
 \PY{k+kt}{uint64\PYZus{}t}\PY{+w}{ }\PY{n+nf}{read\PYZus{}lock}\PY{p}{(}\PY{p}{)}\PY{p}{;}\PY{+w}{ }
 
-\PY{c+cm}{/* returns false if lock is not immediately available*/}
-\PY{k+kr}{inline}\PY{+w}{ }\PY{k+kt}{uint64\PYZus{}t}\PY{+w}{ }\PY{n+nf}{try\PYZus{}read\PYZus{}lock}\PY{p}{(}\PY{p}{)}\PY{p}{;}\PY{+w}{ }
-
 \PY{c+cm}{/* returns VersionNumber upon success, spins until lock is }
 \PY{c+cm}{ * available if writer is present*/}
 \PY{k+kr}{inline}\PY{+w}{ }\PY{k+kt}{uint64\PYZus{}t}\PY{+w}{ }\PY{n+nf}{read\PYZus{}lock\PYZus{}wait}\PY{p}{(}\PY{p}{)}\PY{p}{;}\PY{+w}{ }
 
-\PY{c+cm}{/* returns true if version number matches, application needs to retry if}
-\PY{c+cm}{ * false is returned*/}
+\PY{c+cm}{/* returns true if version number matches, application }
+\PY{c+cm}{ * needs to retry if false is returned*/}
 \PY{k+kr}{inline}\PY{+w}{ }\PY{k+kt}{bool}\PY{+w}{ }\PY{n+nf}{read\PYZus{}unlock}\PY{p}{(}\PY{k+kt}{uint64\PYZus{}t}\PY{+w}{ }\PY{n}{local\PYZus{}version\PYZus{}number}\PY{p}{)}\PY{p}{;}\PY{+w}{ }
 \end{Verbatim}

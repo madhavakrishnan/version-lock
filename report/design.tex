@@ -1,26 +1,80 @@
 \section{Design}
 \label{s:des}
 
-- version lock design 
-	- atomic counter for version
-	- concurrency model
-	- version lock APIs
-- version lock pseudocode
-- version lock hash table example
-- correctness
-
 In this section we explain our design goals followed by the \sys design.
 
 \subsection{Design Goals}
 \label{s:des:goals}
 
 \PP{Avoid read-modify writes for read locks}
+In the PCC techniques, acquiring lock involves modifying the shared memory
+metadata, this is a problem especially for readers. Essentially, the read
+operations becomes read-modify-write operation which incurs high overhead. 
+In \sys, we aim to make the read lock acquire and release operation without any
+writes to the shared memory.
 
 \PP{Avoid cacheline contention for read locks}
+In the lock-free programming, contention on a single cacheline causes cacheline
+bouncing~\cite{} which is one of the chief performance and scalability
+inhibitor for both read and write operations. In \sys, we aim to minimize the
+effects of cacheline bouncing by making writes exclusive. 
 
-\PP{Achieve high scalability and performance}
+\PP{Achieve high scalability}
+Locks need to be scalable across many CPU cores in order foster wider adoption.
+We aim to make \sys highly scalable for both read and write operations.
 
 \PP{Simple lock APIs and interface}
+We aim to expose \sys with some simple APIs to achieve better programmability
+and possibly to avoid significant changes to the existing codebase when adopting
+\sys. 
+
+\subsection{\sys Design}
+\label{s:des:vl}
+
+\PP{Synchronization using counters}
+\sys has a \emph{64-bit atomic counter} at its core. The counter represents the
+version of the \sys and it is monotonically increasing. The counter is
+incremented atomically upon lock acquire and release and it only happens for
+write lock. In \sys, acquire and release of read lock does involve updating the
+counter; it incurs just a lookup to the counter. More details on the read and
+write locks in \autoref{s:des:vl:APIs}. 
+
+\PP{Concurrency model}
+\sys supports non-blocking reads and exclusive writes. When the counter is even
+it denotes that the lock is free and the writer acquires the lock by atomically
+incrementing it. Therefore, if the counter is odd then it means that the lock is
+currently held by the writer. So other writes spins on the counter until the
+counter is back to even again. Lock is released by atomically incrementing the
+counter once more (even-odd-even) and now any writers waiting on the lock would
+try to acquire it. 
+
+For reads, lock acquire involves looking up the current version number
+(\emph{start\_version}) and taking a snapshot of it locally. Then the read
+operation on the shared memory can be executed. Upon completion, lock release
+operation verifies if the \emph{start\_version} has changed by comparing it with
+global version counter \ie the current counter value.  A change in the version
+denotes that a write operation has completed since the read started. This may
+result in the read operation reading a stale or inconsistent value. In order,
+to avoid this problem, the application has to retry the read operation by
+calling lock acquire once again. This retry loop is delegated to the user side
+code \ie the \sys read lock release just returns a bool value to signify if the
+version number has changed. 
+
+\subsubsection{\sys APIs}
+\label{s:des:vl:APIs}
+
+
+
+\autoref{f:api} shows the \sys APIs. \emph{write\_lock} is used to acquire lock
+for write operation which internally manages the version counter. If the lock is
+taken, then the call to \emph{write\_lock} keeps spinning until the lock is
+available. On the other hand, the \emph{try\_write\_lock} API just checks if the
+lock is available and acquires if so, upon lock unavailability it simply returns
+false to the caller. If application needs asynchronous lock acquire operation it
+can leverage the \emph{try\_write\_lock} API. The locks acquired using
+\emph{write\_lock} and \emph{try\_write\_lock} can be released by calling
+\emph{write\_unlock} which internally increments the counter to signify the lock
+release. 
 
 \begin{figure}[t]
 % \vspace{-15px}
@@ -33,8 +87,43 @@ In this section we explain our design goals followed by the \sys design.
  %\vspace{-5px}
 	\caption{\sys APIs to be used directly in the application}
 %\vspace{-20px}
- \label{f:vlw}
+ \label{f:api}
 \end{figure}
+
+For read operations, a call to \emph{read\_lock} is necessary to obtain the
+current version number. The \emph{read\_lock} API is the non-blocking version
+\ie, it does check the lock status and it simply returns the current version
+number even if the lock is held by the writer during the call. On the other
+hand, \emph{read\_no\_wait} API yields for the writer, \ie, if a writer a holds
+the lock during the call, it waits until the lock is released and then acquires
+the read lock by returning the new version number (the one after the write
+completion). Applications can use either of two these APIs based on their
+requirement. Read operations releases the lock by calling \emph{read\_unlock}
+API which internally performs the version matching. Unlike the other APIs,
+\emph{read\_unlock} API takes an argument which is nothing but the local copy of
+the version number obtained by caller during the lock acquire operation. The
+\emph{read\_unlock} functions simply compares this local copy with the current
+version number from the counter. It returns true or false based on the
+comparison operation; true signifies the read operation successful and a false
+value means that the there was an concurrent write during the read operation and
+hence this read operation is invalid. Upon receiving false value, application
+can retry the critical section with calling \emph{read\_lock} again. 
+
+
+\subsubsection{\sys Core API Implementation}
+\label{s:des:vl:impl}
+
+\autoref{f:vlw} and \autoref{f:vlr} shows the implementation of \sys's read and
+write locking operations respectively. 
+
+\PP{write\_lock}
+Lines 1-26 in \autoref{f:vlw} shows the write\_lock implementation. Line 12-13
+retrieves the version number and checks the lock status. Lines 16-22 is the lock
+acquire logic. Line 19 performs a atomic CAS to switch the version number
+(incrementing the version by 1). The \emph{retry\_lock\_acquire} will be
+executed if the lock is already held or if the CAS fails. This retry loop makes
+our write\_lock implementation a spin\_lock. 
+
 
 \begin{figure}[t]
 % \vspace{-15px}
@@ -51,6 +140,19 @@ In this section we explain our design goals followed by the \sys design.
  \label{f:vlw}
 \end{figure}
 
+\PP{write\_unlock}
+Lines 28-39 in \autoref{f:vlw} shows the write\_unlock operation. Line 37
+releases the lock by atomically incrementing the version number by 1. 
+Lines 33-35 handles version number overflow \ie, it resets the version number to
+0. 
+
+\PP{read\_lock}
+The read\_lock just returns the current version number (\autoref{f:vlr}). It is
+the applications' responsibility to take store a local copy of this returned
+version number. Because, this version number needs to be passed to relase the
+read\_lock. Passing a wrong version number can result in a livelock situation. 
+
+
 \begin{figure}[t]
 % \vspace{-15px}
  \centering
@@ -66,6 +168,16 @@ In this section we explain our design goals followed by the \sys design.
  \label{f:vlr}
 \end{figure}
 
+\PP{read\_unlock}
+Lines 10-23 in \autoref{f:vlr} shows the read\_unlock code. Lines 17-18 compares
+the local copy of the version number (passed by the caller) with the current
+version number. If the comparison succeeds it returns true else false is
+returned. 
+
+
+\subsection{\sys Example Using a HashTable}
+\label{s:des:eg}
+
 \begin{figure}[t]
 % \vspace{-15px}
  \centering
@@ -80,4 +192,38 @@ In this section we explain our design goals followed by the \sys design.
 %\vspace{-20px}
  \label{f:vlht}
 \end{figure}
+
+\autoref{f:vlht}, illustrates \sys useage with a hashtable  example, 
+Lines 1-13 illustrates the insert function. Line 6 gets the hash bucket and Line
+7 acquires the per-bucket \sys.  Line 8 calls the list\_insert function which
+inserts the node in the bucket chain. Line 12 unlocks the per-bucket
+write\_lock.  
+
+Lines 16-30, shows the lookup operation. Similar to the insert, Line 24 acquires
+the per-bucket read\_lock and stores the local copy of version number in
+\emph{version}. After the lookup operation in the Line 25, read\_unlock is
+called on the bucket lock passing the local copy of the version number. If
+read\_lock succeeds read operation ends on line 29, else the read operation
+enters the retry loop. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

@@ -14,8 +14,10 @@ retry_lock_acquire:
 
 	/* if lock is free acquire the lock and return*/
 	if (!lock_status) {
-		/* return if CAS succeeds-- meaning lock is acquired*/
-		if (smp_cas(&this->version_number, version, version + SWITCH_LOCK_STATUS))	
+		/* return if CAS succeeds-- 
+		 * meaning lock is acquired*/
+		if (smp_cas(&this->version_number, version, 
+				version + SWITCH_LOCK_STATUS))	
 			return;
 	}
 
@@ -29,7 +31,8 @@ inline void version_lock::write_unlock() {
 
 	/* RESET version_number to 0 to avoid overflow*/
 	if (unlikely(version + 1 == UINT64_MAX - 1))
-		smp_cas(&this->version_number, version, RESET_LOCK);
+		smp_cas(&this->version_number, 
+			version, RESET_LOCK);
 
 	smp_faa(&this->version_number, SWITCH_LOCK_STATUS);
 	return;
