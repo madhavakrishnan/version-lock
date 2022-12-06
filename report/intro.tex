@@ -1,24 +1,45 @@
 \section{Introduction}
 \label{s:intro}
 
-intro...
-- rise of multicore
-- locks are everywhere
-- locks are critical scalability, performance, resource management
-- pessimistic concurrency control 
-	- mutex
-	- rwlock
-- optimistic concurrency control
-	- lock-free
-	- 2pl
-- problems with pcc
-- problems with occ
-- version lock
-	- concurrency model
-	- why is it good?
-- contributions
-	- verision lock idea
-	- version lock implementation in c++
-	- YCSB evaluation and code open source
+The introduction of multi-core machines marked the end of the \emph{free lunch}
+~\cite{herb-sutter, shuffl-locks} making concurrent programming indispensable 
+when designing a high-performance system software or applications. The lock
+based concurrency control has been evolving for the last two decades and it has
+been widely used in the many critical systems software such as the Linux
+Kernel~\cite{}, database systems~\cite{}, web servers and applications~\cite{},
+cloud and datacenter applications\cite{} etc.
 
+The concurrency control can be categorized as 1) pessimistic concurrency control
+(PCC) which proactively acquires lock before modifying the shared memory, and
+2) optimistic concurrency control (OCC) which modifies the shared memory and
+resolves inconsistency by performing conflict resolution. The most commonly
+available locks such as the Mutex~\cite{}, Readers-writer (RW) lock are examples
+of PCC. Two-phase locking (2PL)~\cite{} and lock-free programming~\cite{} are
+common examples of the OCC. 2PL is most commonly used in the database
+transactions and not see as a viable candidate for designing low level data
+structures. On the other hand, lock-free programming~\cite{} are used to 
+design common low-level data structures such as a linked list, hash table, 
+binary search tree etc. Lock-free programming have also been used in the 
+prior research to design more complex data structures such as a B+tree~\cite{}. 
 
+Overall, PCC are easy to use and reason about the correctness but this comes at
+a poor scalability and performance with the increasing core count. On the
+contrary, OCC particularly the lock-free programming 
+enables better
+scalability but it is notoriously hard to program even the simple data
+structures. Writing complex data structures such as B+tree requires some serious
+engineering effort if not impossible. Further, lock-free programming is also
+prone to ABA problem~\cite{} which it even more harder. We explain more 
+on OCC and PCC in \autoref{s:bg}.
+
+So the key question is, \emph{can we make locks optimistic (for scalability) while
+retaining the simplicity of the PCC?}. We propose \sys as answer to this
+question. \sys is an OCC technique that supports non-blocking reads and
+exclusive writes. \sys is designed with scalability, performance, and simplicity
+in mind. 
+We designed \sys using C++ and we expose the \sys with a simple set of
+APIs as found in the C++ standard library and POSIX library. We designed a
+hashtable with \sys and evaluated it using the YCSB workloads~\cite{}. We
+compare \sys's performance with the RW lock (PCC) and lock-free hashtable (OCC).
+Over results show that, \sys outperforms RW lock by up to 40\% and it performs
+on par or better than lock-free while being much simple to use than lock-free.  

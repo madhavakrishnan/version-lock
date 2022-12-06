@@ -1,7 +1,22 @@
 \begin{abstract}
 
-\sys
+Traditional lock based
+pessimistic concurrency control (PCC) techniques are easy to use and are
+widely available in the standard library (e.g., POSIX). But such PCC based locks
+(e.g., Mutex) is know for their poor scalability with the increasing number of
+threads. On the other hand, lock-free programming (OCC) enables better
+scalability but it is notoriously hard to program even the simple data
+structures. Writing complex data structures such as B+tree requires some serious
+engineering effort if not impossible. 
 
+To overcome this problem, we propose \sys, an optimistic concurrency control 
+(OCC) technique that focuses on performance, scalability, and simplicity. 
+We designed \sys using C++ and we expose the \sys with a simple set of
+APIs as found in the C++ standard library and POSIX library. We designed a
+hashtable with \sys and evaluated it using the YCSB workloads. We
+compare \sys's performance with the RW lock (PCC) and lock-free hashtable (OCC).
+Over results show that, \sys outperforms RW lock by up to 40\% and it performs
+on par or better than lock-free while being much simple to use than lock-free.  
 \end{abstract}
 
 
