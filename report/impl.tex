@@ -5,7 +5,9 @@ To evaluate the efficacy of our version locks, we compare it against two popular
 concurrency control schemes : \textit{reader-writer lock} and \textit{lock-free}.
 We implement three variants of an open chaining hash table, each integrated with
 one of the aforementioned concurrency control mechanism. We use the same number of
-hash buckets for each hash table implementation.
+hash buckets for each hash table implementation. For fine-grained locking with
+reader-writer locks, we employ a lock for each bucket of the hash table to achieve
+scalability.
 We use the YCSB workloads
 to evaluate performance of the hash table variants, details are discussed in
 \autoref{s:eval:env}. Our implementation is publicly available at

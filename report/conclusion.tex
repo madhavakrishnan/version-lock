@@ -1,2 +1,37 @@
 \section{Conclusion}
 \label{s:concl}
+
+In this work, we explored optimistic concurrency control using version locks. Our
+implementation of version locks within a hash table shows significant performance
+improvements over other popular thread-safe implementations including a lock-free
+hash table and another protected using reader-writer locks for both uniform and
+skewed workloads. We also discuss the impact of compute-memory locality on the
+performance of an application and show that concurrency control is just one of
+the factors that determines the overall performance.
+
+Based on our exploration and insights, we have several areas for future work:
+
+\squishlists
+
+\item \textit{Version locking for complex data structures} : we only looked at
+hash table in our current work but we believe there is an opportunity for
+optimizing complex data structures like B+-tree, Skiplist. The hierarchical 
+nature of such data structures with complex locking protocols hints at greater
+impact from utilizing version locking.
+
+\item \textit{NUMA-aware synchronization} : our evaluation with separating
+compute from memory shows diminishing performance gains from version locking.
+We want to explore NUMA-aware synchronization, both in the context of blocking
+and non-blocking primitives, similar to prior work~\cite{numarwlocks-calciu-ppopp13,
+salsa-gidron-spaa12}.
+
+\item \textit{Composability} : performance is only one metric that we used in this
+work, we believe there are other important metrics for adoption and usage of a
+particular synchronization primitive, for instance, locks are popular since reasoning
+about their correctness is generally simple. Version locking by its very nature is
+composable, which enables atomic operations across multiple data structures. Composability
+is a nice property to implement transactional memory, we want to survey real-world
+applications to find out more use cases where composability is required and how
+version locking can be used in such applications.
+
+\squishends
