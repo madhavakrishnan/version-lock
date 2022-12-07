@@ -52,7 +52,6 @@ $ vi ./index-microbench/workload_spec/<workloada or workloadb or workloadc or wo
 ```
 In the same file, change the key distribution in `$requestdistribution` (set to either `uniform` or `zipfian`, this parameter is the same as `access pattern` when running the ycsb binary generated above)
 
-```
 
 Generate the workloads. This will generate random integer keys with the specified key distribution.
 ```
