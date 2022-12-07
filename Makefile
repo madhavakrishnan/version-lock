@@ -2,11 +2,11 @@ CUR_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 
 CFLAGS += -std=c++17 
-CFLAGS += -march=native -mtune=native -O0
+CFLAGS += -march=native -mtune=native -O3
 CFLAGS += -g -ggdb3
 CFLAGS += -Werror -Wall
-CFLAGS += -Wno-attributes -Wno-unused-parameter -Wno-unused-value
-CFLAGS += -Wno-unused-function -Wno-packed-not-aligned 
+CFLAGS += -Wno-attributes -Wno-unused-parameter -Wno-unused-value 
+CFLAGS += -Wno-unused-function -Wno-packed-not-aligned -Wno-unused-but-set-variable
 LDFLAGS += $(MEMMGR) -lpthread -ltbb
 
 DEPS_DIR  := $(CUR_DIR)/.deps

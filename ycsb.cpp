@@ -157,10 +157,10 @@ int get_cpu_id()
 
 /////////////////////////////////////////////////////////////////////////////////
 // # ops
-static uint64_t LOAD_SIZE = 32000000;
-static uint64_t RUN_SIZE = 32000000;
+static uint64_t LOAD_SIZE = 64000000;
+static uint64_t RUN_SIZE = 64000000;
 // # buckets in the hash table
-static uint64_t HASH_BUCKETS = 6000000;
+static uint64_t HASH_BUCKETS = 8000000;
 
 void ycsb_load_run_randint(int index_type, int wl, int ap, int num_thread,
         std::vector<uint64_t> &init_keys,
@@ -172,33 +172,35 @@ void ycsb_load_run_randint(int index_type, int wl, int ap, int num_thread,
 
     if (ap == UNIFORM) {
         if (wl == WORKLOAD_A) {
-            init_file = "./index-microbench/workloads/32M/loada_unif_int.dat";
-            txn_file = "./index-microbench/workloads/32M/txnsa_unif_int.dat";
+            init_file = "./index-microbench/workloads/uniform/64M/loada_unif_int.dat";
+            txn_file = "./index-microbench/workloads/uniform/64M/txnsa_unif_int.dat";
         } else if (wl == WORKLOAD_B) {
-            init_file = "./index-microbench/workloads/32M/loadb_unif_int.dat";
-            txn_file = "./index-microbench/workloads/32M/txnsb_unif_int.dat";
+            init_file = "./index-microbench/workloads/uniform/64M/loadb_unif_int.dat";
+            txn_file = "./index-microbench/workloads/uniform/64M/txnsb_unif_int.dat";
         } else if (wl == WORKLOAD_C) {
-            init_file = "./index-microbench/workloads/32M/loadc_unif_int.dat";
-            txn_file = "./index-microbench/workloads/32M/txnsc_unif_int.dat";
+            init_file = "./index-microbench/workloads/uniform/64M/loadc_unif_int.dat";
+            txn_file = "./index-microbench/workloads/uniform/64M/txnsc_unif_int.dat";
         } else if (wl == WORKLOAD_D) {
-            init_file = "./index-microbench/workloads/32M/loadd_unif_int.dat";
-            txn_file = "./index-microbench/workloads/32M/txnsd_unif_int.dat";
+            init_file = "./index-microbench/workloads/uniform/64M/loadd_unif_int.dat";
+            txn_file = "./index-microbench/workloads/uniform/64M/txnsd_unif_int.dat";
         } else {
             std::cout << "incorrect workload type, exiting !!!" << std::endl;
         }
     } else {
         if (wl == WORKLOAD_A) {
-            init_file = "./index-microbench/workloads/32M/loada_unif_int.dat";
-            txn_file = "./index-microbench/workloads/32M/txnsa_unif_int.dat";
+            init_file = "./index-microbench/workloads/zipfian/64M/loada_unif_int.dat";
+            txn_file = "./index-microbench/workloads/zipfian/64M/txnsa_unif_int.dat";
         } else if (wl == WORKLOAD_B) {
-            init_file = "./index-microbench/workloads/32M/loadb_unif_int.dat";
-            txn_file = "./index-microbench/workloads/32M/txnsb_unif_int.dat";
+            init_file = "./index-microbench/workloads/zipfian/64M/loadb_unif_int.dat";
+            txn_file = "./index-microbench/workloads/zipfian/64M/txnsb_unif_int.dat";
         } else if (wl == WORKLOAD_C) {
-            init_file = "./index-microbench/workloads/32M/loadc_unif_int.dat";
-            txn_file = "./index-microbench/workloads/32M/txnsc_unif_int.dat";
+            init_file = "./index-microbench/workloads/zipfian/64M/loadc_unif_int.dat";
+            txn_file = "./index-microbench/workloads/zipfian/64M/txnsc_unif_int.dat";
         } else if (wl == WORKLOAD_D) {
-            init_file = "./index-microbench/workloads/32M/loadd_unif_int.dat";
-            txn_file = "./index-microbench/workloads/32M/txnsd_unif_int.dat";
+            // terminating over here
+            assert(false);
+            init_file = "./index-microbench/workloads/zipfian/64M/loadd_unif_int.dat";
+            txn_file = "./index-microbench/workloads/zipfian/64M/txnsd_unif_int.dat";
         } else {
             std::cout << "incorrect workload type, exiting !!!" << std::endl;
         }
@@ -262,7 +264,7 @@ void ycsb_load_run_randint(int index_type, int wl, int ap, int num_thread,
         next_thread_id.store(0);
         auto func = [&]() {
             int thread_id = next_thread_id.fetch_add(1);
-	          //sched_setaffinity(0, sizeof(cpu_set_t), &cpu_set[thread_id]);
+	          sched_setaffinity(0, sizeof(cpu_set_t), &cpu_set[thread_id]);
                 
             uint64_t start_key = LOAD_SIZE / num_thread * (uint64_t)thread_id;
             uint64_t end_key = start_key + LOAD_SIZE / num_thread;
@@ -294,7 +296,7 @@ void ycsb_load_run_randint(int index_type, int wl, int ap, int num_thread,
         next_thread_id.store(0);
         auto func = [&]() {
             int thread_id = next_thread_id.fetch_add(1);
-            //sched_setaffinity(0, sizeof(cpu_set_t), &cpu_set[thread_id]);
+            sched_setaffinity(0, sizeof(cpu_set_t), &cpu_set[thread_id]);
             uint64_t start_key = RUN_SIZE / num_thread * (uint64_t)thread_id;
             uint64_t end_key = start_key + RUN_SIZE / num_thread;
             bool ins_result;
@@ -308,7 +310,7 @@ void ycsb_load_run_randint(int index_type, int wl, int ap, int num_thread,
                     // this might not be true when multiple threads are used &
                     // key read is inserting during run phase and not load of
                     // the ycsb execution, check this!!
-                    assert(read_result == keys[i]);
+                    //assert(read_result == keys[i]);
                 }
             }
         };
