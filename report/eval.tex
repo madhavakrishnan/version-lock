@@ -1,2 +1,188 @@
 \section{Evaluation}
 \label{s:eval}
+
+In this work, we compare pessimistic concurrency control (PCC) and optimistic
+concurrency control (OCC) using a hash table. We implement variants of an open
+chaining hash table that only differ in the underlying synchronization primitive
+used. For PCC, we use a reader-writer lock for each bucket of the hash table to allow
+concurrent threads working on disjoint buckets to proceed in parallel. In case of
+OCC, we have two variants : a lock-free hash table and another based on
+version locking. These variants use atomic instructions such as 
+\textit{fetch-and-add} and \textit{compare-and-swap} for updating items in the
+hash table while reading an item may involve retries to ensure consistency of the
+read operation.
+
+Our evaluation is aimed at answering the following questions:
+
+\squishlists
+
+\item Can version locking outperform lock-free and a reader-writer lock-based
+design of the hash table ? Does the performance scale with increasing thread
+counts ? (\autoref{s:eval:scale})
+
+\item What is the impact of data hotspots on the performance of different
+hash table variants ? (\autoref{s:eval:skew})
+
+\item What is the performance implication of using read-modify-write primitives
+for read-only operations, as done in the case of reader-writer locks ? 
+(\autoref{s:eval:rmw-read})
+
+\item How the performance varies when the computation and memory are physically
+separated across different NUMA domains ? (\autoref{s:eval:numa})
+
+\squishends
+
+\subsection{Evaluation Setup}
+\label{s:eval:env}
+
+\begin{table}[t!]
+    \ra{1.1}
+    \centering
+    %\scriptsize
+    %\small
+    \footnotesize
+    \resizebox{\columnwidth}{!}{\input{fig/ycsb_description.tex}}
+    \vspace{5px}
+    \caption{
+	YCSB workload characteristics.
+    }
+    \label{s:ycsb}
+    \vspace{-5pt}
+\end{table}
+
+We ran our evaluations on a system with Intel(R) Xeon(R) Gold 5218 2.3 GHz CPU that has
+two NUMA nodes and 16 cores (32 hyperthreads) per node. The system is running Fedora 29
+on Linux kernel 4.18.16. We use YCSB~\cite{ycsb-cooper-socc10} -- a standard key-value
+store benchmark for evaluating the hash table variants. YCSB provides various read-write
+ratios for different workloads, see~\autoref{s:ycsb}. We use
+index-microbench~\cite{indexbench-Wang-sigmod18} to generate the YCSB workloads.
+We use both uniform and Zipfian distribution with random integer keys in our
+workloads. For all evaluations, we first populate the hash table with 64 million
+items and then run the workloads, which performs 64 million operations.
+
+\begin{figure}[t]
+    \centering
+    \input{data/tput-uniform}
+    \vspace{-20pt}
+    \caption{Performance comparison for uniform workloads.}
+    \label{f:unif}
+    \vspace{-2pt}
+\end{figure}
+
+\subsection{Scalability}
+\label{s:eval:scale}
+In this section, we evaluate the scalability of the different concurrency control
+mechanisms using uniform workloads wherein each item has an equal probability of
+being accessed. \autoref{f:unif} shows the throughput for the hash table variants in 
+million operations per second (Mops/sec) for the various workloads as we vary
+the number of threads. For the write-intensive YCSB-A workload (\autoref{f:unif}(a)),
+version locking delivers up to 10\% higher throughput than both the lock-free and
+reader-writer lock (rw-lock) for all thread counts except at 64 threads. Better
+performance than rw-lock is due to no read-modify-writes required for the 50\% read
+operations in this workload. Also, version locking has better performance than lock-free
+since we use an 8-byte compare-and-swap (CAS) while lock-free uses a 16-byte CAS to
+complete read operations. However, at 64 threads, rw-lock outperforms both lock-free and
+version locking approaches. Our evaluation machine has 32 cores (64 hyperthreads) across
+the two NUMA nodes, so we believe a simple serialization for rw-lock in comparison to
+retrying as done in version locking and lock-free is the primary reason for this behaviour.
+Employing exponential backoff to limit retrying can possibly help to limit performance
+degradation, although we have not investigated it in more detail.
+
+Other workloads are read-intensive and read-mostly, and we see better
+performance for version locking and lock-free as compared to rw-lock. This is expected since
+readers still need to acquire and release the shared lock for reading an item from the
+hash table incurring memory writes in the process. For YCSB-B, the performance gap between
+version locking and rw-lock is 46\% at 16 threads. Upon increasing the number of threads
+further, the improvement decreases as all threads are utilized in our system. For the
+read-only YCSB-C workload (\autoref{f:unif}(c)), version locking achieves higher
+throughput than other variants for all thread counts including at 64 threads where it
+outperforms lock-free and rw-lock by 5\% and 21\%, respectively. The performance trend for
+YCSB-D is similar to YCSB-B, so we skip discussing it in more detail and exclude it in our
+later evaluations.
+
+
+\begin{figure*}[t]
+    \centering
+    \input{data/tput-zipf}
+    %\vspace{-20pt}
+    \caption{Performance comparison for Zipfian workloads.}
+    \label{f:zipf}
+    \vspace{-8pt}
+\end{figure*}
+
+\subsection{Performance under skewed workloads}
+\label{s:eval:skew}
+We now evaluate our hash table variants with skewed workloads, generated from
+a Zipfian distribution (Zipfian coefficient = 0.99). Skewed workloads are common
+in production environments, as noted in ~\cite{ycsb-cooper-socc10, hotring-chen-fast20}.
+The results are shown in \autoref{f:zipf}.
+
+For YCSB-A, the performance improvement for version locking over others is smaller
+(between 4-10\%) compared to uniform workloads. For skewed workloads, some key-value
+pairs are accessed with high probability, so contention is not spread as evenly throughout
+the hash table. As a result, the probability of retries for both read and write
+operations for the OCC variants is higher under workload skew. Still, version locking
+has better performance than lock-free and rw-lock, except at 64 threads where rw-lock
+achieves the highest throughput. 
+
+Under read-mostly and read-only (\autoref{f:zipf}(b),(c)) workloads, OCC variants
+always outperform rw-lock. Also, version locking has similar or better performance
+than lock-free design for each configuration.
+
+\subsection{Optimism vs Pessimism for read operations}
+\label{s:eval:rmw-read}
+In this section, we want to compare the optimistic and pessimistic approach for
+read operations and discuss their impact on performance of the application. Specfically,
+we want to look at performance of read-only operations for both uniform(\autoref{f:unif}(c))
+and Zipfian workloads(\autoref{f:zipf}(c)). In each case, OCC variants comprehensively
+outperform pessimitic locks as they perform read operations without writing to memory.
+Hence, threads reading the same or different items do not conflict with each other.
+In contrast, when using a rw-lock, a shared lock is acquired before initiating the read
+and upon its completion, the lock is released. As a result, performing a read operation
+involves read-modify-write primitives that cause cacheline invalidations, resulting
+in performance degradation. Hence, OCC is better suited for read-intensive workloads.
+While this project doesn't deal with workload characterization, we believe insights
+from such studies will help in making informed choices regarding the best suited
+concurrency control in an application.
+
+\begin{figure*}[t]
+    \centering
+    \input{data/tput-numa}
+    %\vspace{-20pt}
+    \caption{Performance under NUMA separation.}
+    \label{f:numa}
+    \vspace{-8pt}
+\end{figure*}
+
+\subsection{Compute-Memory Separation}
+\label{s:eval:numa}
+In our prior evaluations, we use all hyperthreads in our machine and do not consider
+the placement of hash table in memory and where the threads accessing the hash table
+are running. By default, Linux tries to allocate memory on the same NUMA node as the
+node where the thread is running, so locality of compute and memory is achieved
+out-of-the-box. Now, we want to compare the performance of the hash table variants
+when the compute and memory are separated across different NUMA nodes. We pin threads
+on one NUMA node while the entire hash table resides on another NUMA node and run
+uniform workloads, similar to \autoref{s:eval:scale}. Our motivation is to study
+the impact of locality on the performance of the hash table variants and how the
+trends deviate from our prior results. The results are shown in \autoref{f:numa}.
+
+For the write-intensive YCSB-A(\autoref{f:numa}(a)), version locking and lock-free
+have similar performance across all thread counts and the throughput is only 
+slightly better than rw-lock up to 8 threads. As we increase the number of threads,
+all variants have similar performance. This is a deviation from our prior evaluation
+of YCSB-A for both uniform and Zipfian workloads where version locking was able to
+significantly outperform rw-lock. Accessing remote memory is expensive compared to
+local memory, thus an optimized concurrency control does not translate into 
+performance boost for the application. The key insight from this evaluation is that
+the application performance is heavily impacted by the locality of compute and memory,
+independent of specialization done within the application.
+
+For workloads involving mostly read operations(\autoref{f:numa}(b),(c)), performance
+for all hash table variants is lower compared to equivalent settings when remote
+memory pinning is not done(\autoref{f:unif}(b),(c)) since accessing remote memory
+has higher latency than local memory. However, version locking still achieves
+better performance than other variants due to limited or lack of contention for its
+operations.
+
+

@@ -1,0 +1,13 @@
+%\begin{tabular}{|c|l|}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+
+\begin{tabular}{|C{0.20\columnwidth}|L{0.60\columnwidth}|}
+    \hline
+    \textbf{Workloads} & \multicolumn{1}{c|}{\textbf{Characteristics}} \\ \hline
+    YCSB-A            & Write-intensive: 50\% Writes and 50\% Reads \\ \hline
+    YCSB-B            & Read-intensive: 5\% Writes and 95\% Reads   \\ \hline
+    YCSB-C            & Read-only: 100\% Reads                       \\ \hline
+    YCSB-D            & Read-latest: 5\% Writes and 95\% Reads      \\ \hline
+\end{tabular}
